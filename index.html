@@ -229,6 +229,9 @@
             </svg>
         );
 
+        // --- ICONS ---
+        // A collection of SVG icons used throughout the application.
+        // Using a functional component approach for tree-shaking friendliness (in a real build).
         const Icons = {
             Users: (p) => <IconBase d={["M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2", "M9 8.5a4 4 0 1 0 0-8 4 4 0 0 0 0 8", "M22 21v-2a4 4 0 0 0-3-3.87", "M16 3.13a4 4 0 0 1 0 7.75"]} {...p} />,
             ChevronRight: (p) => <IconBase d="m9 18 6-6-6-6" {...p} />,
@@ -259,13 +262,20 @@
         };
 
         // --- UI Komponenten ---
+        // Atomic UI components for consistent styling and behavior.
 
+        /**
+         * Generic Card component with default styling.
+         */
         const Card = ({ children, className = "", onClick }) => (
             <div onClick={onClick} className={`bg-white rounded-2xl shadow-sm border border-slate-100/60 p-5 ${className}`}>
                 {children}
             </div>
         );
 
+        /**
+         * Status Badge component for visual categorization.
+         */
         const Badge = ({ children, color = "blue" }) => {
             const colors = {
                 blue: "bg-blue-50 text-blue-700 ring-1 ring-blue-100",
@@ -280,6 +290,9 @@
             );
         };
 
+        /**
+         * Button component supporting different variants (primary, secondary, etc.) and icons.
+         */
         const Button = ({ children, variant = 'primary', className = "", icon: Icon, onClick, disabled = false, type = "button", ...props }) => {
             const baseStyles = "w-full py-3.5 rounded-2xl text-sm font-semibold transition-all flex items-center justify-center gap-2.5 active:scale-[0.98] select-none touch-manipulation";
             const variants = {
@@ -296,6 +309,11 @@
             );
         };
 
+        /**
+         * Global Toast notification component.
+         * Auto-dismisses after 4 seconds. 
+         * Supports "Undo" functionality.
+         */
         const Toast = ({ message, onUndo, visible, onClose }) => {
             useEffect(() => {
                 if (visible) {
@@ -327,9 +345,14 @@
 
         // --- Modals ---
 
+        /**
+         * Modal for adding or editing a medication.
+         * Handles parsing of existing dosage strings and strictly validated inputs.
+         */
         const AddMedicationModal = ({ isOpen, onClose, onSave, initialData }) => {
             const [name, setName] = useState('');
-            const [dosage, setDosage] = useState('');
+            const [amount, setAmount] = useState(''); // Separate Zustände für Menge und Einheit
+            const [unit, setUnit] = useState('mg');
             const [instructions, setInstructions] = useState('');
             const [selectedTimes, setSelectedTimes] = useState([]);
 
@@ -337,12 +360,21 @@
                 if (isOpen) {
                     if (initialData) {
                         setName(initialData.name);
-                        setDosage(initialData.dosage);
+                        const match = (initialData.dosage || '').match(/^(\d+(?:\.\d+)?)\s*(mg|ml|g|Einheiten)$/i);
+                        // Zerlegt den Dosierungs-String (z.B. "400 mg") in Wert und Einheit
+                        if (match) {
+                            setAmount(match[1]);
+                            setUnit(match[2].toLowerCase() === 'einheiten' ? 'Einheiten' : match[2].toLowerCase());
+                        } else {
+                            setAmount(parseFloat(initialData.dosage) || '');
+                            setUnit('mg');
+                        }
                         setInstructions(initialData.instructions || '');
                         setSelectedTimes(initialData.times || []);
                     } else {
                         setName('');
-                        setDosage('');
+                        setAmount('');
+                        setUnit('mg');
                         setInstructions('');
                         setSelectedTimes([]);
                     }
@@ -372,7 +404,8 @@
 
                 const medData = {
                     name,
-                    dosage: dosage || 'Wie verordnet',
+                    // Setzt Menge und Einheit wieder zu einem String zusammen
+                    dosage: amount ? `${amount} ${unit}` : 'Wie verordnet',
                     times: selectedTimes,
                     instructions: instructions || ''
                 };
@@ -405,7 +438,20 @@
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Dosierung</label>
-                                    <input type="text" placeholder="z.B. 400mg" className="input-neon" value={dosage} onChange={e => setDosage(e.target.value)} />
+                                    {/* Eingabefelder für Dosierung: Zahl und Dropdown für Einheit */}
+                                    <div className="flex gap-2">
+                                        <input type="number" placeholder="z.B. 400" className="input-neon flex-1" value={amount} onChange={e => setAmount(e.target.value)} />
+                                        <div className="relative w-24">
+                                            {/* Dropdown für Einheit */}
+                                            <select className="input-neon input-neon-select w-full" value={unit} onChange={e => setUnit(e.target.value)}>
+                                                <option value="mg">mg</option>
+                                                <option value="g">g</option>
+                                                <option value="ml">ml</option>
+                                                <option value="Einheiten">Einheiten</option>
+                                                <option value="Tropfen">Tropfen</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Zeiten</label>
@@ -426,11 +472,14 @@
                                 </div>
                             </form>
                         </div>
-                    </div>
-                </div>
+                    </div >
+                </div >
             );
         };
 
+        /**
+         * Modal for creating new family members.
+         */
         const AddProfileModal = ({ isOpen, onClose, onSave }) => {
             const [name, setName] = useState('');
             const [age, setAge] = useState('');
@@ -486,6 +535,10 @@
             );
         };
 
+        /**
+         * Mock iOS PWA Install Prompt.
+         * Detects iOS environment checks if already standalone, and shows install instructions.
+         */
         const IOSInstallPrompt = () => {
             const [show, setShow] = useState(false);
             useEffect(() => {
@@ -509,6 +562,7 @@
             );
         };
         // UserSettingsModal
+        // Mock implementation of user settings/account view.
         const UserSettingsModal = ({ isOpen, onClose }) => {
             if (!isOpen) return null;
 
@@ -563,6 +617,10 @@
             );
         };
 
+        /**
+         * Modal to view details of a medical document (Lab Result or Prescription).
+         * Dynamically renders content based on document type.
+         */
         const DocumentViewerModal = ({ document, isOpen, onClose }) => {
             if (!isOpen || !document) return null;
 
@@ -643,6 +701,10 @@
 
         // --- Screens ---
 
+        /**
+         * Simple Line-Chart Component using SVG.
+         * Renders a smoothed Bezier curve or straight lines depending on implementation.
+         */
         const SimpleChart = ({ data, color }) => {
             if (!data || data.length < 2) return null;
             const sorted = [...data].sort((a, b) => new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time));
@@ -676,7 +738,7 @@
                 const y0 = getY(points[i]);
                 const x1 = getX(i + 1);
                 const y1 = getY(points[i + 1]);
-                // Simple straight lines for now to ensure sharpness/accuracy as requested, but scaled better
+                // Simple straight lines for now to ensure sharpness/accuracy
                 pathData += ` L ${x1},${y1}`;
             }
 
@@ -711,6 +773,11 @@
             )
         };
 
+        /**
+         * Weekly Report View.
+         * Visualizes weekly progress with charts and summary statistics.
+         * Currently uses hardcoded mock data for demonstration.
+         */
         const WeeklyReportView = ({ onBack }) => {
             const stats = [
                 { day: "Mo", val: 142, h: "60%" },
@@ -817,6 +884,10 @@
             );
         };
 
+        /**
+         * Family Home Screen / Dashboard.
+         * Lists all available family profiles and provides access to global settings.
+         */
         const FamilyHome = ({ profiles, onSelectProfile, onAddProfile, onOpenReport, onOpenSettings }) => (
             <div className="max-w-md mx-auto p-4 space-y-6 pb-32 pt-[env(safe-area-inset-top)] h-full overflow-y-auto no-scrollbar">
                 <header className="flex justify-between items-end mb-8 pt-6 px-2">
@@ -874,26 +945,29 @@
             </div>
         );
 
+        /**
+         * Detailed Profile View.
+         * Displays medications, vital values, and documents for a specific person.
+         * Features a parallax header animation on scroll.
+         */
         const ProfileView = ({ profile, onBack, showToast, onAddMedication, onDeleteMedication, onEditMedication }) => {
-            const [activeTab, setActiveTab] = useState('meds');
+            const [activeTab, setActiveTab] = useState('protokoll');
+            const [selectedDate, setSelectedDate] = useState(new Date());
             const [selectedDocument, setSelectedDocument] = useState(null);
             const [takenMeds, setTakenMeds] = useState({});
             const [showAllStats, setShowAllStats] = useState(false);
-            // State for expanded chart sections
-            const [expandedStats, setExpandedStats] = useState({}); // { 'blood-sugar': true }
+            const [expandedStats, setExpandedStats] = useState({});
 
             const toggleStatExpand = (type) => {
                 setExpandedStats(prev => ({ ...prev, [type]: !prev[type] }));
             };
 
-            // Refs for animation elements
             const headerRef = useRef(null);
             const avatarRef = useRef(null);
             const nameRef = useRef(null);
             const patientLabelRef = useRef(null);
             const conditionsRef = useRef(null);
 
-            // Optimized scroll handler using direct DOM manipulation
             const handleScroll = (e) => {
                 const scrolled = e.currentTarget.scrollTop;
                 const maxScroll = 150;
@@ -925,15 +999,46 @@
                 });
             };
 
-            const toggleMed = (med) => {
-                const isNowTaken = !takenMeds[med.id];
-                setTakenMeds(prev => ({ ...prev, [med.id]: isNowTaken }));
+            const toggleMed = (med, time) => {
+                const dateKey = selectedDate.toISOString().split('T')[0];
+                const key = `${dateKey}_${med.id}_${time}`;
+                // Check if it's explicitly set in state, otherwise default to true if it's a past date
+                const isPastDate = new Date(dateKey) < new Date(new Date().toISOString().split('T')[0]);
+                const currentState = takenMeds.hasOwnProperty(key) ? takenMeds[key] : isPastDate;
+
+                const isNowTaken = !currentState;
+                setTakenMeds(prev => ({ ...prev, [key]: isNowTaken }));
                 if (navigator.vibrate) navigator.vibrate(50);
-                showToast(isNowTaken ? `${med.name} eingenommen` : `${med.name} zurückgesetzt`,
-                    () => setTakenMeds(prev => ({ ...prev, [med.id]: !isNowTaken })));
+                showToast(isNowTaken ? `${med.name} eingenommen` : `Einnahme zurückgesetzt`,
+                    () => setTakenMeds(prev => ({ ...prev, [key]: !isNowTaken })));
             };
 
-            const allMedsTaken = profile.medications.length > 0 && profile.medications.every(m => takenMeds[m.id] || m.takenToday.length > 0);
+            const allTasks = profile.medications.flatMap(m => m.times.map(t => ({ id: m.id, time: t })));
+            const allTaken = allTasks.length > 0 && allTasks.every(task => {
+                const dateKey = selectedDate.toISOString().split('T')[0];
+                const key = `${dateKey}_${task.id}_${task.time}`;
+                const isPastDate = new Date(dateKey) < new Date(new Date().toISOString().split('T')[0]);
+                // Return state value if present, otherwise true for past dates, false for today/future
+                return takenMeds.hasOwnProperty(key) ? takenMeds[key] : isPastDate;
+            });
+
+            const medsByTime = {};
+            profile.medications.forEach(med => {
+                med.times.forEach(t => {
+                    if (!medsByTime[t]) medsByTime[t] = [];
+                    medsByTime[t].push(med);
+                });
+            });
+            const sortedTimes = Object.keys(medsByTime).sort();
+
+            const getTimeLabel = (t) => {
+                const hour = parseInt(t.split(':')[0]);
+                if (hour < 10) return 'Morgens';
+                if (hour < 14) return 'Mittags';
+                if (hour < 17) return 'Nachmittags';
+                if (hour < 22) return 'Abends';
+                return 'Nachts';
+            };
 
             const measurementLabels = { "blood-sugar": "Blutzucker", "blood-pressure": "Blutdruck", "weight": "Gewicht", "temperature": "Temperatur" };
             const getUnit = (type) => ({ "blood-sugar": "mg/dl", "weight": "kg", "temperature": "°C", "blood-pressure": "mmHg" }[type] || "mg/dl");
@@ -942,121 +1047,167 @@
                 const n = parseInt(v); if (isNaN(n)) return ""; if (n < 70 || n > 140) return "text-red-600"; if (n > 120) return "text-orange-500"; return "text-emerald-600";
             };
 
-            const displayedMeasurements = showAllStats ? profile.measurements : profile.measurements.slice(0, 5);
-
             return (
                 <div className="flex flex-col h-full bg-slate-50/50 w-full relative">
-
-                    {/* --- FIXED ANIMATED HEADER --- */}
-                    <div
-                        ref={headerRef}
-                        className="fixed top-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-md z-40 transition-shadow duration-100 overflow-hidden border-b border-transparent"
-                        style={{ height: '280px' }}
-                    >
-                        {/* Static Elements (Back Button) */}
+                    <div ref={headerRef} className="fixed top-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-md z-40 transition-shadow duration-100 overflow-hidden border-b border-transparent" style={{ height: '280px' }}>
                         <div className="absolute top-0 left-0 right-0 h-16 flex items-center px-4 z-50 pt-[env(safe-area-inset-top)]">
                             <button onClick={onBack} className="p-2.5 hover:bg-slate-100 rounded-full text-slate-600 transition-colors touch-manipulation">
                                 <Icons.ArrowLeft className="h-6 w-6" />
                             </button>
-                            <span
-                                ref={patientLabelRef}
-                                className="absolute right-6 font-bold text-slate-400 text-[10px] tracking-widest uppercase transition-opacity duration-300"
-                            >
-                                Patientenprofil
-                            </span>
+                            <span ref={patientLabelRef} className="absolute right-6 font-bold text-slate-400 text-[10px] tracking-widest uppercase transition-opacity duration-300">Patientenprofil</span>
                         </div>
-
-                        {/* Animated Avatar */}
-                        <div
-                            ref={avatarRef}
-                            className="absolute bg-slate-100 text-slate-400 rounded-full flex items-center justify-center shadow-inner overflow-hidden z-20 origin-center"
-                            style={{ width: '96px', height: '96px', top: '60px', left: '50%', transform: 'translateX(-50%)' }}
-                        >
+                        <div ref={avatarRef} className="absolute bg-slate-100 text-slate-400 rounded-full flex items-center justify-center shadow-inner overflow-hidden z-20 origin-center" style={{ width: '96px', height: '96px', top: '60px', left: '50%', transform: 'translateX(-50%)' }}>
                             {profile.avatar ? <img src={profile.avatar} alt={profile.name} className="w-full h-full object-cover" /> : (profile.relation === 'self' ? '👩‍🦰' : '👵')}
                         </div>
-
-                        {/* Animated Name */}
-                        <h2
-                            ref={nameRef}
-                            className="absolute text-slate-900 tracking-tight z-20 whitespace-nowrap origin-center"
-                            style={{ top: '165px', left: '50%', transform: 'translateX(-50%)', fontSize: '1.5rem' }}
-                        >
-                            {profile.name}
-                        </h2>
-
-                        {/* Fading Conditions */}
+                        <h2 ref={nameRef} className="absolute text-slate-900 tracking-tight z-20 whitespace-nowrap origin-center" style={{ top: '165px', left: '50%', transform: 'translateX(-50%)', fontSize: '1.5rem' }}>{profile.name}</h2>
                         {profile.conditions.length > 0 && (
-                            <div
-                                ref={conditionsRef}
-                                className="absolute w-full flex justify-center gap-2 top-[205px] z-10 transition-opacity"
-                            >
+                            <div ref={conditionsRef} className="absolute w-full flex justify-center gap-2 top-[205px] z-10 transition-opacity">
                                 {profile.conditions.map(c => <span key={c} className="px-3 py-1 bg-white border border-indigo-100 text-indigo-600 rounded-full text-xs font-semibold shadow-sm">{c}</span>)}
                             </div>
                         )}
-
-                        {/* Tabs - Stick to bottom of Header */}
-                        <div className="absolute bottom-0 left-0 right-0 flex justify-around px-6 pb-0 bg-white/50 backdrop-blur-sm z-30">
-                            {['meds', 'stats', 'docs'].map((tab) => {
-                                const labels = { meds: 'Medikamente', stats: 'Werte', docs: 'Dokumente' };
-                                return <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 pb-4 text-sm font-semibold transition-all relative touch-manipulation pt-2 ${activeTab === tab ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-500'}`}>{labels[tab]}{activeTab === tab && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-indigo-600 rounded-full shadow-lg shadow-indigo-200" />}</button>
-                            })}
+                        <div className="absolute bottom-0 left-0 right-0 flex justify-around px-2 pb-0 bg-white/50 backdrop-blur-sm z-30">
+                            {[
+                                { id: 'protokoll', label: 'Protokoll' },
+                                { id: 'plan', label: 'Medikamente' },
+                                { id: 'stats', label: 'Werte' },
+                                { id: 'docs', label: 'Dokumente' }
+                            ].map((tab) => (
+                                <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex-1 pb-4 text-xs sm:text-sm font-semibold transition-all relative touch-manipulation pt-2 ${activeTab === tab.id ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-500'}`}>
+                                    {tab.label}
+                                    {activeTab === tab.id && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-indigo-600 rounded-full shadow-lg shadow-indigo-200" />}
+                                </button>
+                            ))}
                         </div>
                     </div>
 
-                    {/* --- SCROLL CONTENT --- */}
-                    <div
-                        className="flex-1 overflow-y-auto no-scrollbar p-5 space-y-6 pt-[290px] w-full"
-                        onScroll={handleScroll}
-                    >
-                        {activeTab === 'meds' && (
-                            <div className="space-y-4 animate-slide-up">
-                                {allMedsTaken && (
+                    <div className="flex-1 overflow-y-auto no-scrollbar p-5 space-y-6 pt-[290px] w-full" onScroll={handleScroll}>
+                        {activeTab === 'protokoll' && (
+                            <div className="space-y-6 animate-slide-up">
+                                {/* Week Calendar Strip */}
+                                <div className="flex justify-between items-center overflow-x-auto pb-2 gap-2 no-scrollbar px-1 -mx-2 sm:mx-0">
+                                    {(() => {
+                                        const week = [];
+                                        const curr = new Date();
+                                        const day = curr.getDay();
+                                        const diff = curr.getDate() - day + (day === 0 ? -6 : 1);
+                                        const monday = new Date(curr.setDate(diff));
+
+                                        for (let i = 0; i < 7; i++) {
+                                            const d = new Date(monday);
+                                            d.setDate(monday.getDate() + i);
+                                            week.push(d);
+                                        }
+
+                                        return week.map(date => {
+                                            const dKey = date.toISOString().split('T')[0];
+                                            const sKey = selectedDate.toISOString().split('T')[0];
+                                            const isSelected = dKey === sKey;
+                                            const isToday = dKey === new Date().toISOString().split('T')[0];
+
+                                            return (
+                                                <button
+                                                    key={dKey}
+                                                    onClick={() => setSelectedDate(date)}
+                                                    className={`relative flex flex-col items-center flex-1 min-w-[40px] p-2.5 rounded-2xl transition-all duration-300 touch-manipulation ${isSelected ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-200 scale-105 z-10' : 'bg-white text-slate-400 hover:bg-slate-50 border border-slate-100'}`}
+                                                >
+                                                    <span className={`text-[10px] uppercase font-bold tracking-wider mb-1 ${isSelected ? 'opacity-80' : 'opacity-60'}`}>{date.toLocaleDateString('de-DE', { weekday: 'short' }).slice(0, 2)}</span>
+                                                    <span className={`text-base font-bold ${isToday && !isSelected ? 'text-indigo-600' : ''}`}>{date.getDate()}</span>
+                                                    {isToday && <div className={`absolute -bottom-1 w-1 h-1 rounded-full ${isSelected ? 'bg-white' : 'bg-indigo-600'}`}></div>}
+                                                </button>
+                                            );
+                                        });
+                                    })()}
+                                </div>
+
+                                {allTaken && (
                                     <div className="bg-emerald-50/80 border border-emerald-100/50 backdrop-blur-sm rounded-2xl p-5 flex items-center gap-4 animate-zoom-in shadow-sm shadow-emerald-100">
                                         <div className="bg-emerald-100 p-2.5 rounded-full text-emerald-600"><Icons.Trophy size={24} className="relative z-10" /></div>
-                                        <div><h4 className="font-bold text-emerald-900">Tagesziel erreicht!</h4><p className="text-xs font-medium text-emerald-700/80 mt-0.5">Alle Medikamente eingenommen.</p></div>
+                                        <div><h4 className="font-bold text-emerald-900">Tagesziel erreicht!</h4><p className="text-xs font-medium text-emerald-700/80 mt-0.5">Alle Medikamente für {selectedDate.getDate() === new Date().getDate() ? 'heute' : 'diesen Tag'} eingenommen.</p></div>
                                     </div>
                                 )}
+
                                 <div className="flex items-center justify-between px-1">
-                                    <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2"><Icons.Clock className="text-indigo-500" size={20} /> Heute fällig</h3>
-                                    <span className="text-xs font-semibold text-slate-500 bg-white px-3 py-1.5 rounded-lg border border-slate-100 shadow-sm">{new Date().toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                                    <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                                        <Icons.Clock className="text-indigo-500" size={20} />
+                                        {selectedDate.toDateString() === new Date().toDateString() ? 'Einnahme heute' : `Einnahme am ${selectedDate.toLocaleDateString('de-DE', { weekday: 'long' })}`}
+                                    </h3>
+                                    <span className="text-xs font-semibold text-slate-500 bg-white px-3 py-1.5 rounded-lg border border-slate-100 shadow-sm">{selectedDate.toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}</span>
                                 </div>
+
                                 {profile.medications.length === 0 ? (
                                     <div className="text-center py-16 bg-white rounded-3xl border-2 border-dashed border-slate-100"><div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300"><Icons.Pill size={32} /></div><p className="text-slate-500 font-medium">Keine Medikamente</p></div>
                                 ) : (
-                                    profile.medications.map(med => {
-                                        const isTaken = med.takenToday.length > 0 || takenMeds[med.id];
-                                        return (
-                                            <Card key={med.id} onClick={() => toggleMed(med)} className={`flex justify-between items-center transition-all touch-manipulation group relative pr-12 cursor-pointer hover:border-indigo-200 hover:shadow-md ${isTaken ? 'bg-slate-50/80 border-transparent shadow-none' : ''}`}>
-                                                <div className={isTaken ? 'opacity-50 grayscale transition-all' : 'transition-all'}>
-                                                    <div className="flex items-center gap-2"><h4 className={`font-bold text-[15px] transition-all ${isTaken ? 'text-slate-500 line-through' : 'text-slate-800'}`}>{med.name}</h4></div>
-                                                    <p className="text-xs font-medium text-slate-500 mt-1">{med.dosage}</p>
-                                                    {med.instructions && <p className="text-[10px] text-slate-400 mt-1 italic leading-tight max-w-[150px]">{med.instructions}</p>}
-                                                    <div className="flex gap-2 mt-3">{med.times.map(t => <span key={t} className={`text-[10px] px-2 py-1 rounded-md font-bold tracking-wide ${isTaken ? 'bg-slate-200 text-slate-500' : 'bg-indigo-50 text-indigo-600 border border-indigo-100'}`}>{t}</span>)}</div>
+                                    <div className="space-y-6">
+                                        {sortedTimes.map(time => (
+                                            <div key={time} className="animate-fade-in">
+                                                <div className="flex items-center gap-3 mb-3 px-1">
+                                                    <span className="text-sm font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-lg">{time}</span>
+                                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{getTimeLabel(time)}</span>
+                                                    <div className="h-px bg-slate-100 flex-1"></div>
                                                 </div>
-                                                <div className="absolute right-4 flex items-center gap-3">
-                                                    <button onClick={(e) => { e.stopPropagation(); onEditMedication(med); }} className="p-2 text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 rounded-full transition-colors"><Icons.Edit size={18} /></button>
-                                                    <button onClick={(e) => { e.stopPropagation(); onDeleteMedication(med.id); }} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"><Icons.Trash2 size={18} /></button>
-                                                    <button className={`h-12 w-12 rounded-full flex items-center justify-center transition-all duration-300 ${isTaken ? 'bg-gradient-to-br from-green-400 to-emerald-600 text-white shadow-lg shadow-emerald-200 scale-105' : 'bg-white border-2 border-slate-100 text-slate-200 hover:border-indigo-200 hover:text-indigo-300 shadow-sm'}`}>{isTaken ? <Icons.CheckCircle2 size={24} /> : <Icons.Circle size={24} strokeWidth={1.5} />}</button>
+                                                <div className="space-y-3">
+                                                    {medsByTime[time].map(med => {
+                                                        const dateKey = selectedDate.toISOString().split('T')[0];
+                                                        const key = `${dateKey}_${med.id}_${time}`;
+                                                        const isPastDate = new Date(dateKey) < new Date(new Date().toISOString().split('T')[0]);
+                                                        const isTaken = takenMeds.hasOwnProperty(key) ? takenMeds[key] : isPastDate;
+
+                                                        return (
+                                                            <div key={key} onClick={() => toggleMed(med, time)} className={`bg-white rounded-2xl p-4 border transition-all cursor-pointer relative overflow-hidden group active:scale-[0.99] touch-manipulation ${isTaken ? 'border-transparent bg-slate-50/50' : 'border-slate-100 shadow-sm hover:border-indigo-200'}`}>
+                                                                <div className="flex justify-between items-center relative z-10">
+                                                                    <div className={isTaken ? 'opacity-50 grayscale transition-all' : 'transition-all'}>
+                                                                        <h4 className={`font-bold text-base ${isTaken ? 'text-slate-500 line-through' : 'text-slate-800'}`}>{med.name}</h4>
+                                                                        <div className="flex items-center gap-2 mt-1">
+                                                                            <span className="text-xs font-semibold text-slate-500 bg-slate-100/80 px-2 py-0.5 rounded-md">{med.dosage}</span>
+                                                                            {med.instructions && <span className="text-[10px] text-slate-400 italic max-w-[150px] truncate">{med.instructions}</span>}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${isTaken ? 'bg-emerald-500 text-white shadow-md shadow-emerald-200 scale-110' : 'bg-slate-100 text-slate-300 group-hover:bg-indigo-50 group-hover:text-indigo-400'}`}>
+                                                                        {isTaken ? <Icons.CheckCircle2 size={18} /> : <Icons.Circle size={18} />}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
-                                            </Card>
-                                        )
-                                    })
-                                )}
-                                <Button variant="outline" className="border-dashed border-slate-300 text-slate-400 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50/50" icon={Icons.Plus} onClick={() => onAddMedication(true)}>Medikament hinzufügen</Button>
-                                {profile.medications.some(m => m.refillDate) && (
-                                    <div className="mt-8 pt-6 border-t border-slate-200/60">
-                                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 px-1">Nachschub erforderlich</h4>
-                                        {profile.medications.filter(m => m.refillDate).map(m => (
-                                            <div key={m.id + 'refill'} className="flex items-center gap-4 p-4 bg-orange-50/50 rounded-2xl border border-orange-100 mb-3">
-                                                <div className="bg-orange-100 p-2 rounded-full text-orange-500"><Icons.AlertCircle size={20} /></div>
-                                                <div className="flex-1"><p className="text-sm font-bold text-slate-800">{m.name}</p><p className="text-xs font-medium text-orange-700 mt-0.5">Fällig: {new Date(m.refillDate).toLocaleDateString('de-DE')}</p></div>
-                                                <button className="px-4 py-2 bg-white text-orange-600 text-xs font-bold rounded-xl border border-orange-100 shadow-sm hover:bg-orange-50 transition-colors">Bestellen</button>
                                             </div>
                                         ))}
                                     </div>
                                 )}
                             </div>
                         )}
+
+                        {activeTab === 'plan' && (
+                            <div className="space-y-4 animate-slide-up">
+                                <div className="flex items-center justify-between px-1 mb-2">
+                                    <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2"><Icons.Pill className="text-indigo-500" size={20} /> Alle Medikamente</h3>
+                                </div>
+                                {profile.medications.length === 0 ? (
+                                    <div className="text-center py-10"><p className="text-slate-400 text-sm">Liste ist leer.</p></div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {profile.medications.map(med => (
+                                            <Card key={med.id} className="group relative pr-12">
+                                                <div>
+                                                    <h4 className="font-bold text-slate-800">{med.name}</h4>
+                                                    <p className="text-sm font-medium text-slate-500 mt-1">{med.dosage}</p>
+                                                    <div className="flex gap-2 mt-3 flex-wrap">{med.times.map(t => <span key={t} className="text-[10px] px-2 py-1 rounded-md font-bold tracking-wide bg-indigo-50 text-indigo-600 border border-indigo-100">{t}</span>)}</div>
+                                                    {med.refillDate && <div className="mt-3 flex items-center gap-2 text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-1 rounded-lg w-fit"><Icons.AlertCircle size={12} /> Nachschub: {new Date(med.refillDate).toLocaleDateString()}</div>}
+                                                </div>
+                                                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-2">
+                                                    <button onClick={() => onEditMedication(med)} className="p-2 text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 rounded-full transition-colors"><Icons.Edit size={18} /></button>
+                                                    <button onClick={() => onDeleteMedication(med.id)} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"><Icons.Trash2 size={18} /></button>
+                                                </div>
+                                            </Card>
+                                        ))}
+                                    </div>
+                                )}
+                                <div className="pt-4">
+                                    <Button variant="outline" className="border-dashed border-slate-300 text-slate-400 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50/50" icon={Icons.Plus} onClick={() => onAddMedication(true)}>Medikament hinzufügen</Button>
+                                </div>
+                            </div>
+                        )}
+
                         {activeTab === 'stats' && (
                             <div className="space-y-6 animate-slide-up">
                                 <div><h3 className="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2 px-1"><Icons.Calendar className="text-indigo-500" size={20} /> Termine</h3>
@@ -1071,44 +1222,22 @@
                                             {Array.from(new Set(profile.measurements.map(m => m.type))).map(type => {
                                                 const typeMeds = profile.measurements.filter(m => m.type === type).sort((a, b) => new Date(b.date + 'T' + b.time) - new Date(a.date + 'T' + a.time));
                                                 const typeColor = { "blood-sugar": "#10b981", "blood-pressure": "#ef4444", "weight": "#3b82f6", "temperature": "#f97316" }[type] || "#6366f1";
-
                                                 const isExpanded = expandedStats[type];
                                                 const visibleMeds = isExpanded ? typeMeds : typeMeds.slice(0, 3);
-
                                                 return (
                                                     <div key={type} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                                                         <div className="p-4 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
-                                                            <h4 className="font-bold text-slate-700 capitalize flex items-center gap-2">
-                                                                <div className="w-2 h-2 rounded-full" style={{ background: typeColor }}></div>
-                                                                {measurementLabels[type] || type}
-                                                            </h4>
+                                                            <h4 className="font-bold text-slate-700 capitalize flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{ background: typeColor }}></div>{measurementLabels[type] || type}</h4>
                                                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{getUnit(type)}</span>
                                                         </div>
-
-                                                        <div className="p-4 pb-0 bg-gradient-to-b from-white to-slate-50/30">
-                                                            <SimpleChart data={typeMeds} color={typeColor} />
-                                                        </div>
-
+                                                        <div className="p-4 pb-0 bg-gradient-to-b from-white to-slate-50/30"><SimpleChart data={typeMeds} color={typeColor} /></div>
                                                         {visibleMeds.map((m, i) => (
                                                             <div key={m.id} className={`flex justify-between items-center p-4 hover:bg-slate-50 transition-colors ${i !== visibleMeds.length - 1 ? 'border-b border-slate-50' : ''}`}>
-                                                                <div className="flex-1">
-                                                                    <span className={`font-bold text-base ${getBloodSugarColor(m.value, m.type)}`}>{m.value}</span>
-                                                                    {m.notes && <p className="text-[10px] font-medium text-slate-400 mt-0.5">{m.notes}</p>}
-                                                                </div>
-                                                                <div className="text-right">
-                                                                    <div className="text-xs font-medium text-slate-600">{new Date(m.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}</div>
-                                                                    <div className="text-[10px] text-slate-400">{m.time}</div>
-                                                                </div>
+                                                                <div className="flex-1"><span className={`font-bold text-base ${getBloodSugarColor(m.value, m.type)}`}>{m.value}</span>{m.notes && <p className="text-[10px] font-medium text-slate-400 mt-0.5">{m.notes}</p>}</div>
+                                                                <div className="text-right"><div className="text-xs font-medium text-slate-600">{new Date(m.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}</div><div className="text-[10px] text-slate-400">{m.time}</div></div>
                                                             </div>
                                                         ))}
-                                                        {typeMeds.length > 3 && (
-                                                            <div
-                                                                onClick={() => toggleStatExpand(type)}
-                                                                className="p-3 text-center text-xs font-bold text-indigo-500 uppercase tracking-widest border-t border-slate-50 cursor-pointer hover:bg-indigo-50 transition-colors"
-                                                            >
-                                                                {isExpanded ? "Weniger anzeigen" : `Alle ${typeMeds.length} Werte anzeigen`}
-                                                            </div>
-                                                        )}
+                                                        {typeMeds.length > 3 && (<div onClick={() => toggleStatExpand(type)} className="p-3 text-center text-xs font-bold text-indigo-500 uppercase tracking-widest border-t border-slate-50 cursor-pointer hover:bg-indigo-50 transition-colors">{isExpanded ? "Weniger anzeigen" : `Alle ${typeMeds.length} Werte anzeigen`}</div>)}
                                                     </div>
                                                 )
                                             })}
@@ -1134,7 +1263,12 @@
 
         // --- App Component ---
 
+        /**
+         * Root Layout Component.
+         * Manages global state (profiles, selected view, active modals).
+         */
         function App() {
+            // Initial Mock Data: Defines the default state of the application.
             const [profiles, setProfiles] = useState([
                 {
                     id: "petra", name: "Petra Weber", relation: "mother", age: 58, conditions: ["Typ 1 Diabetes"], streak: 0, achievements: [], sharedWith: [],
@@ -1216,8 +1350,11 @@
             const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
             const [editingMedication, setEditingMedication] = useState(null);
 
+            // --- Handlers ---
+
             const triggerToast = (msg, undo) => { setToast({ msg, undo }); };
 
+            // Logic to add or update a medication in the selected profile's list.
             const handleSaveMedication = (medData) => {
                 setProfiles(prev => prev.map(p => {
                     if (p.id !== selectedProfileId) return p;
@@ -1281,6 +1418,7 @@
                 <div className="flex justify-center bg-slate-100 min-h-screen">
                     <div className="w-full max-w-md bg-slate-50/30 shadow-2xl overflow-hidden relative h-[100dvh] flex-col">
 
+                        {/* View Router */}
                         {currentView === 'report' ? (
                             <WeeklyReportView onBack={() => setCurrentView('home')} />
                         ) : currentView === 'profile' && selectedProfile ? (
@@ -1319,6 +1457,7 @@
             );
         }
 
+        // Mount the React Application
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
